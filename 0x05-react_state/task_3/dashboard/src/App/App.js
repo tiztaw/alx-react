@@ -9,6 +9,8 @@ import Footer from '../Footer/Footer';
 import CourseList from '../CourseList/CourseList';
 import Notifications from '../Notifications/Notifications';
 import { getLatestNotification } from '../utils/utils';
+import { user, logOut } from './AppContext.js';
+import AppContext from './AppContext';
 
 const listCourses = [
   {id: 1, name: 'ES6', credit: 60},
@@ -16,7 +18,7 @@ const listCourses = [
   {id: 3, name: 'React', credit: 40}
 ];
 
-const listNotifications = [
+const newlistNotifications = [
   {id: 1, type: 'default', value: 'New course available'},
   {id: 2, type: 'urgent', value: 'New resume available'},
   {id: 3, type: 'urgent', html: { __html: getLatestNotification() }}
@@ -25,10 +27,18 @@ const listNotifications = [
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { displayDrawer: false };
     this.keyboardKeys = this.keyboardKeys.bind(this);
     this.handleDisplayDrawer = this.handleDisplayDrawer.bind(this);
     this.handleHideDrawer = this.handleHideDrawer.bind(this);
+    this.logIn = this.logIn.bind(this);
+    this.logOut = this.logOut.bind(this);
+    this.markNotificationAsRead = this.markNotificationAsRead.bind(this);
+    this.state = {
+      displayDrawer: false,
+      user: user,
+      logOut: this.logOut,
+      listNotifications: newlistNotifications
+    };
   }
 
   keyboardKeys(x) {
@@ -46,6 +56,26 @@ class App extends React.Component {
     this.setState({ displayDrawer: false });
   }
 
+  logIn(email, password) {
+    this.setState({
+      user: {
+        email: email,
+        password: password,
+        isLoggedIn: true
+      },
+    });
+  }
+
+  logOut() {
+    this.setState({ user: user });
+  }
+
+  markNotificationAsRead(id){
+    this.setState({
+      listNotifications: this.state.listNotifications.filter(notification => notification.id !== id)
+    });
+  }
+
   componentDidMount() {
     document.addEventListener('keydown', this.keyboardKeys);
   }
@@ -55,29 +85,30 @@ class App extends React.Component {
   }
 
   render() {
-    const { isLoggedIn, logOut } = this.props;
-    const { displayDrawer } = this.state;
+    const { displayDrawer, user, logOut, listNotifications } = this.state;
+    const value = { user, logOut };
 
     return (
-      <React.Fragment>
+      <AppContext.Provider value={value}>
         <Notifications
           listNotifications={listNotifications}
           displayDrawer={displayDrawer}
           handleDisplayDrawer={this.handleDisplayDrawer}
           handleHideDrawer={this.handleHideDrawer}
+          markNotificationAsRead={this.markNotificationAsRead}
         />
         <div className={css(styles.App)}>
           <Header />
         </div>
         <div className={css(styles.AppBody)}>
           {
-            isLoggedIn ? (
+            user.isLoggedIn ? (
               <BodySectionWithMarginBottom title="Course list">
                 <CourseList listCourses={listCourses}/>
               </BodySectionWithMarginBottom>
             ) : (
               <BodySectionWithMarginBottom title="Log in to continue">
-                <Login />
+                <Login logIn ={this.logIn} />
               </BodySectionWithMarginBottom>
             )
           }
@@ -100,7 +131,7 @@ class App extends React.Component {
         <div className={css(styles.AppFooter)}>
           <Footer />
         </div>
-      </React.Fragment>
+      </AppContext.Provider>
     );
   }
 }
@@ -127,18 +158,9 @@ const styles = StyleSheet.create({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    borderTop: '4px solid #e1354b'
+    borderTop: '4px solid #e1354b',
+    textAlign: 'center'
   },
 });
-
-App.propTypes = {
-  isLoggedIn: PropTypes.bool,
-  logOut: PropTypes.func
-};
-
-App.defaultProps = {
-  isLoggedIn: false,
-  logOut: () => {}
-};
 
 export default App;
